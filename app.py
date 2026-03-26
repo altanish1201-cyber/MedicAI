@@ -123,7 +123,7 @@ if text_to_process:
         precautions_response = client.chat.completions.create(
             model="llama-3.1-8b-instant", 
             messages=[
-                {"role": "system", "content": f"Provide 3 safe home precautions for this report. Format as a list. RULES: 1. Use ONLY Devanagari script for {language}. 2. NO English/Roman letters. 3. NO Chinese/other scripts."},
+                {"role": "system", "content": f"Provide 3 safe home precautions for this report. Format as a list. RULES: 1. Use ONLY Devnagari script for {language}. 2. NO English/Roman letters. 3. NO Chinese/other scripts."},
                 {"role": "user", "content": f"Report: ### {text_to_process} ###"}
             ]
         )

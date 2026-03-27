@@ -4,13 +4,12 @@ import time
 import pytesseract
 from PIL import Image
 
-# Initialize the Client pointing to the free Groq endpoint
 client = OpenAI(
     api_key="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", 
     base_url="https://api.groq.com/openai/v1"
 )
 
-# --- PAGE CONFIGURATION ---
+#PAGE CONFIGURATION
 st.set_page_config(page_title="MedicAI | BioBackers", page_icon="🏥", layout="wide")
 
 # CUSTOM CSS FOR CONTRAST AND UI
@@ -35,7 +34,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HEADER ---
+# HEADER
 col_head1, col_head2 = st.columns([3, 1])
 with col_head1:
     st.title("🏥 MedicAI: True Agentic Pipeline")
@@ -43,7 +42,6 @@ with col_head1:
 with col_head2:
     st.info("Status: Live Prototype | ABDM Compliant")
 
-# Add this right under the Header section in app.py
 with st.expander("📋 Don't have a report? Copy this Sample ECG Data"):
     sample_data = """Patient: John D'Souza, 18M. 
     Findings: Sinus tachycardia. Heart rate 105 bpm. 
@@ -53,7 +51,7 @@ with st.expander("📋 Don't have a report? Copy this Sample ECG Data"):
     st.code(sample_data)
     st.caption("Copy the text above and paste it into the 'Paste Text' tab below.")
 
-# --- SIDEBAR ---
+#SIDEBAR
 with st.sidebar:
     st.header("Team BioBackers")
     st.write("**SIT Pune | Division A-2**")
@@ -62,7 +60,7 @@ with st.sidebar:
     st.write("⚙️ **System Settings**")
     language = st.selectbox("Target Localization", ["Hindi (हिंदी)", "Marathi (मराठी)"])
 
-# --- MAIN INPUT AREA ---
+# MAIN INPUT AREA
 st.markdown("### 📥 Choose Input Method")
 tab1, tab2 = st.tabs(["📝 Paste Text", "📸 Upload Image Scan"])
 
@@ -81,21 +79,21 @@ with tab2:
     if uploaded_image:
         image = Image.open(uploaded_image)
         st.image(image, caption="Uploaded Medical Document", width=400)
-        if st.button("🚀 Run Pipeline on Image", key="btn_img"):
-            with st.spinner("👁️ [Vision Agent] Extracting text via OCR..."):
+        if st.button("Run Pipeline on Image", key="btn_img"):
+            with st.spinner("[Vision Agent] Extracting text via OCR..."):
                 extracted_text = pytesseract.image_to_string(image)
                 if extracted_text.strip():
                     text_to_process = extracted_text
                 else:
                     st.error("Could not read text from the image. Please try a clearer scan.")
 
-# --- THE 5-AGENT PIPELINE ---
+# THE 5-AGENT PIPELINE 
 if text_to_process:
     st.divider()
     with st.status("Executing 5-Agent Workflow...", expanded=True) as status:
         
         # AGENT 1: TRIAGE
-        st.write("🛡️ [Risk & Triage Agent] Analyzing medical context...")
+        st.write("[Risk & Triage Agent] Analyzing medical context...")
         risk_response = client.chat.completions.create(
             model="llama-3.1-8b-instant", 
             messages=[{"role": "system", "content": "You are a medical triage agent. Read the report and reply with ONLY a JSON format: {'document_type': '...', 'risk_level': 'HIGH/MODERATE/LOW', 'risk_reason': '...', 'recommendation': '...'}"},
@@ -104,7 +102,7 @@ if text_to_process:
         risk_data = risk_response.choices[0].message.content 
         
         # AGENT 2: SIMPLIFIER
-        st.write("🧠 [Simplifier Agent] Drafting layman explanation...")
+        st.write("[Simplifier Agent] Drafting layman explanation...")
         simp_response = client.chat.completions.create(
             model="llama-3.1-8b-instant", 
             messages=[{"role": "system", "content": "Convert this medical text into simple English sentences for someone with low health literacy. Use minimal numbers and explain what the report means in plain english. Keep it less than 10 lines. Also DO NOT be ambiguous."},
@@ -113,12 +111,12 @@ if text_to_process:
         final_english = simp_response.choices[0].message.content
         
         # AGENT 3: REVIEWER (Self-Correction omitted for speed in this demo version)
-        st.write("🕵️ [Reviewer Agent] Auditing for medical accuracy...")
+        st.write("[Reviewer Agent] Auditing for medical accuracy...")
         time.sleep(0.5)
         st.success("Reviewer Agent cleared the output.")
 
         # AGENT 4: TRANSLATOR (BULLETPROOF)
-        st.write(f"🌐 [Translation Agent] Localizing to {language}...")
+        st.write(f"[Translation Agent] Localizing to {language}...")
         trans_response = client.chat.completions.create(
             model="llama-3.1-8b-instant", 
             messages=[
@@ -129,7 +127,7 @@ if text_to_process:
         hindi_translation = trans_response.choices[0].message.content
 
         # AGENT 5: HOME CARE (BULLETPROOF)
-        st.write(f"🏡 [Home Care Agent] Generating precautions in {language}...")
+        st.write(f"[Home Care Agent] Generating precautions in {language}...")
         precautions_response = client.chat.completions.create(
             model="llama-3.1-8b-instant", 
             messages=[
@@ -142,18 +140,18 @@ if text_to_process:
         status.update(label="Pipeline Complete!", state="complete")
 
     # --- RESULTS DISPLAY ---
-    st.subheader("📊 Analyzed Report Results")
+    st.subheader("Analyzed Report Results")
     col_a, col_b = st.columns(2)
     
     with col_a:
-        st.markdown(f"<div class='result-card'><b>🧠 Plain English Summary</b><br><p>{final_english}</p></div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='result-card'><b>🌐 Localized ({language})</b><br><p>{hindi_translation}</p></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='result-card'><b>Plain English Summary</b><br><p>{final_english}</p></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='result-card'><b> Localized ({language})</b><br><p>{hindi_translation}</p></div>", unsafe_allow_html=True)
 
     with col_b:
         risk_class = "risk-high" if "HIGH" in risk_data.upper() else "risk-mod" if "MODERATE" in risk_data.upper() else "risk-low"
-        st.markdown(f"<div class='result-card {risk_class}'><b>🚨 Triage & Risk Data</b><br><pre style='white-space: pre-wrap; font-family: sans-serif; color: #1a1a1a;'>{risk_data}</pre></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='result-card {risk_class}'><b>Triage & Risk Data</b><br><pre style='white-space: pre-wrap; font-family: sans-serif; color: #1a1a1a;'>{risk_data}</pre></div>", unsafe_allow_html=True)
         
-    st.markdown(f"<div class='result-card' style='border-left: 5px solid #2196f3; background-color: #e3f2fd;'><b>🏡 At-Home Precautions ({language})</b><br><p>{home_precautions}</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='result-card' style='border-left: 5px solid #2196f3; background-color: #e3f2fd;'><b>At-Home Precautions ({language})</b><br><p>{home_precautions}</p></div>", unsafe_allow_html=True)
         
     with st.expander("Show Original Medical Text / OCR Output"):
         st.text(text_to_process)

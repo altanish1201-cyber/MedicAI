@@ -45,7 +45,7 @@ with col_head2:
 
 # Add this right under the Header section in app.py
 with st.expander("📋 Don't have a report? Copy this Sample ECG Data"):
-    sample_data = """Patient: Anish Sahu, 18M. 
+    sample_data = """Patient: John Sahu, 18M. 
     Findings: Sinus tachycardia. Heart rate 105 bpm. 
     ST-elevation noted in leads V1-V3. 
     Impression: Possible acute anterior wall MI. 

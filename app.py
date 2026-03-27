@@ -107,7 +107,7 @@ if text_to_process:
         st.write("🧠 [Simplifier Agent] Drafting layman explanation...")
         simp_response = client.chat.completions.create(
             model="llama-3.1-8b-instant", 
-            messages=[{"role": "system", "content": "Convert this medical text into simple English sentences for someone with low health literacy. Use minimal numbers and explain what the report means in plain english. Keep it less than 10 lines."},
+            messages=[{"role": "system", "content": "Convert this medical text into simple English sentences for someone with low health literacy. Use minimal numbers and explain what the report means in plain english. Keep it less than 10 lines. Also DO NOT be ambiguous. And use first person speech instead of using 3rd person speech."},
                       {"role": "user", "content": text_to_process}]
         )
         final_english = simp_response.choices[0].message.content

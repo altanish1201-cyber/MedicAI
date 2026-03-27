@@ -43,6 +43,16 @@ with col_head1:
 with col_head2:
     st.info("Status: Live Prototype | ABDM Compliant")
 
+# Add this right under the Header section in app.py
+with st.expander("📋 Don't have a report? Copy this Sample ECG Data"):
+    sample_data = """Patient: Anish Sahu, 18M. 
+    Findings: Sinus tachycardia. Heart rate 105 bpm. 
+    ST-elevation noted in leads V1-V3. 
+    Impression: Possible acute anterior wall MI. 
+    Urgent clinical correlation required."""
+    st.code(sample_data)
+    st.caption("Copy the text above and paste it into the 'Paste Text' tab below.")
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("Team BioBackers")

@@ -186,7 +186,7 @@ if text_to_process:
                     "{'document_type': 'Type of report', 'risk_level': 'HIGH/MODERATE/LOW', "
                     "'risk_reason': 'Reason for risk level in 1 sentence', 'recommendation': 'Actionable doctor consultation guidance'}"
                 )
-                model_triage = genai.GenerativeModel("gemini-1.5-flash", system_instruction=triage_prompt)
+                model_triage = genai.GenerativeModel("gemini-2.5-flash", system_instruction=triage_prompt)
                 response_triage = model_triage.generate_content(text_to_process)
                 risk_data = response_triage.text.strip()
                 
@@ -197,7 +197,7 @@ if text_to_process:
                     "for a patient with zero health literacy. Avoid complex Latin terminology, explain abbreviations, "
                     "and keep it under 8 lines. Do not be ambiguous."
                 )
-                model_simp = genai.GenerativeModel("gemini-1.5-flash", system_instruction=simp_prompt)
+                model_simp = genai.GenerativeModel("gemini-2.5-flash", system_instruction=simp_prompt)
                 response_simp = model_simp.generate_content(text_to_process)
                 layman_english = response_simp.text.strip()
                 
@@ -210,7 +210,7 @@ if text_to_process:
                     "If not, output a corrected layman summary. "
                     "STRICT RULE: Output ONLY the final summary text without any preamble."
                 )
-                model_audit = genai.GenerativeModel("gemini-1.5-flash", system_instruction=audit_prompt)
+                model_audit = genai.GenerativeModel("gemini-2.5-flash", system_instruction=audit_prompt)
                 response_audit = model_audit.generate_content(f"Original report:\n{text_to_process}\n\nLayman Summary:\n{layman_english}")
                 final_english_summary = response_audit.text.strip()
                 
@@ -221,7 +221,7 @@ if text_to_process:
                     f"STRICT RULES: 1. Use ONLY Devanagari script. 2. Do NOT use English/Latin letters. "
                     f"3. Do NOT use Hinglish/slang. 4. Output only the translated text."
                 )
-                model_trans = genai.GenerativeModel("gemini-1.5-flash", system_instruction=trans_prompt)
+                model_trans = genai.GenerativeModel("gemini-2.5-flash", system_instruction=trans_prompt)
                 response_trans = model_trans.generate_content(final_english_summary)
                 localized_translation = response_trans.text.strip()
                 
@@ -233,7 +233,7 @@ if text_to_process:
                     f"STRICT RULES: 1. Write in {language} using Devanagari script. "
                     f"2. Do NOT use Roman letters. 3. Ensure precautions are medically safe."
                 )
-                model_care = genai.GenerativeModel("gemini-1.5-flash", system_instruction=care_prompt)
+                model_care = genai.GenerativeModel("gemini-2.5-flash", system_instruction=care_prompt)
                 response_care = model_care.generate_content(text_to_process)
                 home_precautions = response_care.text.strip()
                 

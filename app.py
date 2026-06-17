@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI
+import google.generativeai as genai
 import time
 import os
 import json
@@ -71,23 +71,19 @@ with st.sidebar:
     st.markdown("## MedicAI Settings")
     
     # Secure API Key configuration
-    api_key_from_env = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY", "")
+    api_key_from_env = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", "")
     
     if api_key_from_env:
         st.success("🔑 API Key configured from Environment")
-        groq_api_key = api_key_from_env
+        gemini_api_key = api_key_from_env
     else:
         # Fallback to sidebar user input
-        groq_api_key = st.text_input(
-            "Enter Groq API Key:",
+        gemini_api_key = st.text_input(
+            "Enter Gemini API Key:",
             type="password",
-            placeholder="gsk_...",
-            help="Get your free API key at console.groq.com"
+            placeholder="AIzaSy...",
+            help="Get your free API key at aistudio.google.com"
         )
-        # Internal fallback for direct out-of-box demonstration if the user has no key yet
-        if not groq_api_key:
-            st.warning("⚠️ Enter a Groq Key to run, or using shared demo key.")
-            groq_api_key = "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" # Fallback Demo Key
 
     st.divider()
     
@@ -172,179 +168,154 @@ with tab2:
 if text_to_process:
     st.divider()
     
-    # Initialize Groq client using compatibility wrapper
-    try:
-        client = OpenAI(
-            api_key=groq_api_key,
-            base_url="https://api.groq.com/openai/v1"
-        )
-        
-        with st.status("🔗 Running 5-Agent Pipeline Workflow...", expanded=True) as status:
-            
-            # --- AGENT 1: TRIAGE ---
-            st.write("🛡️ [Risk & Triage Agent] Screening clinical findings for urgent risks...")
-            triage_prompt = (
-                "You are an expert medical triage agent. Read the provided report and output a JSON object "
-                "representing the assessment. STRICT RULES: Reply with ONLY a valid raw JSON object. Do not wrap in ```json or markdown. "
-                "Fields: "
-                "{'document_type': 'Type of report', 'risk_level': 'HIGH/MODERATE/LOW', "
-                "'risk_reason': 'Reason for risk level in 1 sentence', 'recommendation': 'Actionable doctor consultation guidance'}"
-            )
-            risk_response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": triage_prompt},
-                    {"role": "user", "content": text_to_process}
-                ]
-            )
-            risk_data = risk_response.choices[0].message.content.strip()
-            
-            # --- AGENT 2: SIMPLIFIER ---
-            st.write("🧠 [Simplifier Agent] Converting medical jargon to layman terms...")
-            simp_prompt = (
-                "Convert this medical report into extremely simple, high-readability English sentences "
-                "for a patient with zero health literacy. Avoid complex Latin terminology, explain abbreviations, "
-                "and keep it under 8 lines. Do not be ambiguous."
-            )
-            simp_response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": simp_prompt},
-                    {"role": "user", "content": text_to_process}
-                ]
-            )
-            layman_english = simp_response.choices[0].message.content.strip()
-            
-            # --- AGENT 3: REVIEWER (CLINICAL AUDITOR) ---
-            st.write("🕵️ [Clinical Auditor Agent] Verifying summary accuracy & safety...")
-            audit_prompt = (
-                "You are a strict clinical auditor. Compare the layman explanation against the original report. "
-                "Identify any medical misinterpretations, dangerous omissions, or hallucinated warnings. "
-                "If the summary is correct and safe, reply with it exactly. "
-                "If not, output a corrected layman summary. "
-                "STRICT RULE: Output ONLY the final summary text without any preamble."
-            )
-            audit_response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": audit_prompt},
-                    {"role": "user", "content": f"Original report:\n{text_to_process}\n\nLayman Summary:\n{layman_english}"}
-                ]
-            )
-            final_english_summary = audit_response.choices[0].message.content.strip()
-            
-            # --- AGENT 4: TRANSLATOR ---
-            st.write(f"🌐 [Translation Agent] Translating audited summary to {language}...")
-            trans_prompt = (
-                f"You are a medical translator. Translate the given summary into {language}. "
-                f"STRICT RULES: 1. Use ONLY Devanagari script. 2. Do NOT use English/Latin letters. "
-                f"3. Do NOT use Hinglish/slang. 4. Output only the translated text."
-            )
-            trans_response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": trans_prompt},
-                    {"role": "user", "content": final_english_summary}
-                ]
-            )
-            localized_translation = trans_response.choices[0].message.content.strip()
-            
-            # --- AGENT 5: HOME CARE ---
-            st.write(f"🏡 [Home Care Agent] Formulating localized at-home precautions...")
-            care_prompt = (
-                f"Provide 3 safe, general home care precautions for a patient with this report. "
-                f"Format as a clean bulleted list. "
-                f"STRICT RULES: 1. Write in {language} using Devanagari script. "
-                f"2. Do NOT use Roman letters. 3. Ensure precautions are medically safe."
-            )
-            care_response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": care_prompt},
-                    {"role": "user", "content": text_to_process}
-                ]
-            )
-            home_precautions = care_response.choices[0].message.content.strip()
-            
-            status.update(label="⚡ Pipeline Processing Complete!", state="complete")
-            
-        # --- RESULTS VIEW ---
-        st.markdown("## 📊 Analysis Dashboard")
-        
-        # 1. Parse Triage structured JSON
-        parsed_triage = {}
+    if not gemini_api_key:
+        st.error("🔑 **Gemini API Key Required:** Please configure the `GEMINI_API_KEY` environment variable or input it in the sidebar settings on the left to run this analysis.")
+    else:
+        # Initialize Gemini SDK
         try:
-            # Match only the JSON structure
-            json_match = re.search(r'\{.*\}', risk_data, re.DOTALL)
-            if json_match:
-                parsed_triage = json.loads(json_match.group(0))
+            genai.configure(api_key=gemini_api_key)
+            
+            with st.status("🔗 Running 5-Agent Pipeline Workflow...", expanded=True) as status:
+                
+                # --- AGENT 1: TRIAGE ---
+                st.write("🛡️ [Risk & Triage Agent] Screening clinical findings for urgent risks...")
+                triage_prompt = (
+                    "You are an expert medical triage agent. Read the provided report and output a JSON object "
+                    "representing the assessment. STRICT RULES: Reply with ONLY a valid raw JSON object. Do not wrap in ```json or markdown. "
+                    "Fields: "
+                    "{'document_type': 'Type of report', 'risk_level': 'HIGH/MODERATE/LOW', "
+                    "'risk_reason': 'Reason for risk level in 1 sentence', 'recommendation': 'Actionable doctor consultation guidance'}"
+                )
+                model_triage = genai.GenerativeModel("gemini-1.5-flash", system_instruction=triage_prompt)
+                response_triage = model_triage.generate_content(text_to_process)
+                risk_data = response_triage.text.strip()
+                
+                # --- AGENT 2: SIMPLIFIER ---
+                st.write("🧠 [Simplifier Agent] Converting medical jargon to layman terms...")
+                simp_prompt = (
+                    "Convert this medical report into extremely simple, high-readability English sentences "
+                    "for a patient with zero health literacy. Avoid complex Latin terminology, explain abbreviations, "
+                    "and keep it under 8 lines. Do not be ambiguous."
+                )
+                model_simp = genai.GenerativeModel("gemini-1.5-flash", system_instruction=simp_prompt)
+                response_simp = model_simp.generate_content(text_to_process)
+                layman_english = response_simp.text.strip()
+                
+                # --- AGENT 3: REVIEWER (CLINICAL AUDITOR) ---
+                st.write("🕵️ [Clinical Auditor Agent] Verifying summary accuracy & safety...")
+                audit_prompt = (
+                    "You are a strict clinical auditor. Compare the layman explanation against the original report. "
+                    "Identify any medical misinterpretations, dangerous omissions, or hallucinated warnings. "
+                    "If the summary is correct and safe, reply with it exactly. "
+                    "If not, output a corrected layman summary. "
+                    "STRICT RULE: Output ONLY the final summary text without any preamble."
+                )
+                model_audit = genai.GenerativeModel("gemini-1.5-flash", system_instruction=audit_prompt)
+                response_audit = model_audit.generate_content(f"Original report:\n{text_to_process}\n\nLayman Summary:\n{layman_english}")
+                final_english_summary = response_audit.text.strip()
+                
+                # --- AGENT 4: TRANSLATOR ---
+                st.write(f"🌐 [Translation Agent] Translating audited summary to {language}...")
+                trans_prompt = (
+                    f"You are a medical translator. Translate the given summary into {language}. "
+                    f"STRICT RULES: 1. Use ONLY Devanagari script. 2. Do NOT use English/Latin letters. "
+                    f"3. Do NOT use Hinglish/slang. 4. Output only the translated text."
+                )
+                model_trans = genai.GenerativeModel("gemini-1.5-flash", system_instruction=trans_prompt)
+                response_trans = model_trans.generate_content(final_english_summary)
+                localized_translation = response_trans.text.strip()
+                
+                # --- AGENT 5: HOME CARE ---
+                st.write(f"🏡 [Home Care Agent] Formulating localized at-home precautions...")
+                care_prompt = (
+                    f"Provide 3 safe, general home care precautions for a patient with this report. "
+                    f"Format as a clean bulleted list. "
+                    f"STRICT RULES: 1. Write in {language} using Devanagari script. "
+                    f"2. Do NOT use Roman letters. 3. Ensure precautions are medically safe."
+                )
+                model_care = genai.GenerativeModel("gemini-1.5-flash", system_instruction=care_prompt)
+                response_care = model_care.generate_content(text_to_process)
+                home_precautions = response_care.text.strip()
+                
+                status.update(label="⚡ Pipeline Processing Complete!", state="complete")
+                
+            # --- RESULTS VIEW ---
+            st.markdown("## 📊 Analysis Dashboard")
+            
+            # 1. Parse Triage structured JSON
+            parsed_triage = {}
+            try:
+                # Match only the JSON structure
+                json_match = re.search(r'\{.*\}', risk_data, re.DOTALL)
+                if json_match:
+                    parsed_triage = json.loads(json_match.group(0))
+                else:
+                    parsed_triage = json.loads(risk_data)
+            except Exception:
+                parsed_triage = {
+                    "risk_level": "MODERATE" if "MODERATE" in risk_data.upper() else "HIGH" if "HIGH" in risk_data.upper() else "LOW",
+                    "risk_reason": "Structured parsing failed. Displaying raw data.",
+                    "recommendation": "Consult a physician for clinical assessment.",
+                    "document_type": "Medical Document"
+                }
+                
+            triage_level = parsed_triage.get("risk_level", "LOW").upper()
+            doc_type = parsed_triage.get("document_type", "Medical Document")
+            triage_reason = parsed_triage.get("risk_reason", "")
+            triage_recommendation = parsed_triage.get("recommendation", "")
+            
+            # Render beautiful risk banners based on risk classification
+            if "HIGH" in triage_level:
+                st.error(f"🚨 **CRITICAL TRIAGE FLAG: HIGH RISK** | Type: *{doc_type}*")
+                col_t1, col_t2 = st.columns(2)
+                with col_t1:
+                    st.markdown(f"**Clinical Finding Reason:**\n{triage_reason}")
+                with col_t2:
+                    st.markdown(f"**Required Next Steps:**\n{triage_recommendation}")
+            elif "MOD" in triage_level:
+                st.warning(f"⚠️ **TRIAGE ALERT: MODERATE RISK** | Type: *{doc_type}*")
+                col_t1, col_t2 = st.columns(2)
+                with col_t1:
+                    st.markdown(f"**Clinical Finding Reason:**\n{triage_reason}")
+                with col_t2:
+                    st.markdown(f"**Required Next Steps:**\n{triage_recommendation}")
             else:
-                parsed_triage = json.loads(risk_data)
-        except Exception:
-            parsed_triage = {
-                "risk_level": "MODERATE" if "MODERATE" in risk_data.upper() else "HIGH" if "HIGH" in risk_data.upper() else "LOW",
-                "risk_reason": "Structured parsing failed. Displaying raw data.",
-                "recommendation": "Consult a physician for clinical assessment.",
-                "document_type": "Medical Document"
-            }
+                st.success(f"✅ **TRIAGE CLEAR: LOW RISK** | Type: *{doc_type}*")
+                col_t1, col_t2 = st.columns(2)
+                with col_t1:
+                    st.markdown(f"**Clinical Finding Reason:**\n{triage_reason}")
+                with col_t2:
+                    st.markdown(f"**Required Next Steps:**\n{triage_recommendation}")
             
-        triage_level = parsed_triage.get("risk_level", "LOW").upper()
-        doc_type = parsed_triage.get("document_type", "Medical Document")
-        triage_reason = parsed_triage.get("risk_reason", "")
-        triage_recommendation = parsed_triage.get("recommendation", "")
-        
-        # Render beautiful risk banners based on risk classification
-        if "HIGH" in triage_level:
-            st.error(f"🚨 **CRITICAL TRIAGE FLAG: HIGH RISK** | Type: *{doc_type}*")
-            col_t1, col_t2 = st.columns(2)
-            with col_t1:
-                st.markdown(f"**Clinical Finding Reason:**\n{triage_reason}")
-            with col_t2:
-                st.markdown(f"**Required Next Steps:**\n{triage_recommendation}")
-        elif "MOD" in triage_level:
-            st.warning(f"⚠️ **TRIAGE ALERT: MODERATE RISK** | Type: *{doc_type}*")
-            col_t1, col_t2 = st.columns(2)
-            with col_t1:
-                st.markdown(f"**Clinical Finding Reason:**\n{triage_reason}")
-            with col_t2:
-                st.markdown(f"**Required Next Steps:**\n{triage_recommendation}")
-        else:
-            st.success(f"✅ **TRIAGE CLEAR: LOW RISK** | Type: *{doc_type}*")
-            col_t1, col_t2 = st.columns(2)
-            with col_t1:
-                st.markdown(f"**Clinical Finding Reason:**\n{triage_reason}")
-            with col_t2:
-                st.markdown(f"**Required Next Steps:**\n{triage_recommendation}")
-        
-        st.write("")
-        
-        # Main side-by-side results layout
-        col_res1, col_res2 = st.columns(2)
-        
-        with col_res1:
-            st.subheader("📝 Layman English Summary")
-            st.info(final_english_summary)
+            st.write("")
             
-        with col_res2:
-            st.subheader(f"🌐 Localized Report ({language})")
-            st.success(localized_translation)
+            # Main side-by-side results layout
+            col_res1, col_res2 = st.columns(2)
             
-        # Precautions banner
-        st.subheader(f"🏡 At-Home Precautions ({language})")
-        st.markdown(f"""
-        <div style="background-color: rgba(33, 150, 243, 0.08); border-left: 5px solid #2196f3; padding: 15px; border-radius: 8px;">
-            {home_precautions}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Show original data
-        st.write("")
-        with st.expander("📄 Show Original Report Text"):
-            st.code(text_to_process, language="text")
+            with col_res1:
+                st.subheader("📝 Layman English Summary")
+                st.info(final_english_summary)
+                
+            with col_res2:
+                st.subheader(f"🌐 Localized Report ({language})")
+                st.success(localized_translation)
+                
+            # Precautions banner
+            st.subheader(f"🏡 At-Home Precautions ({language})")
+            st.markdown(f"""
+            <div style="background-color: rgba(33, 150, 243, 0.08); border-left: 5px solid #2196f3; padding: 15px; border-radius: 8px;">
+                {home_precautions}
+            </div>
+            """, unsafe_allow_html=True)
             
-        # Professional clinical disclaimer
-        st.divider()
-        st.caption("⚠️ **Disclaimer:** *MedicAI is an AI-powered diagnostic helper prototype. It does not provide professional medical advice, diagnosis, or treatment. Always consult a qualified medical professional for health concerns.*")
-        
-    except Exception as api_err:
-        st.error(f"Failed to communicate with LLM API. Please check your Groq API Key and connection settings. Details: {api_err}")
+            # Show original data
+            st.write("")
+            with st.expander("📄 Show Original Report Text"):
+                st.code(text_to_process, language="text")
+                
+            # Professional clinical disclaimer
+            st.divider()
+            st.caption("⚠️ **Disclaimer:** *MedicAI is an AI-powered diagnostic helper prototype. It does not provide professional medical advice, diagnosis, or treatment. Always consult a qualified medical professional for health concerns.*")
+            
+        except Exception as api_err:
+            st.error(f"Failed to communicate with Gemini API. Please check your Gemini API Key and configuration settings. Details: {api_err}")

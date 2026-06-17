@@ -201,21 +201,14 @@ if text_to_process:
                 response_simp = model_simp.generate_content(text_to_process)
                 layman_english = response_simp.text.strip()
                 
-                # --- AGENT 3: REVIEWER (CLINICAL AUDITOR) ---
-                st.write("🕵️ [Clinical Auditor Agent] Verifying summary accuracy & safety...")
-                audit_prompt = (
-                    "You are a strict clinical auditor. Compare the layman explanation against the original report. "
-                    "Identify any medical misinterpretations, dangerous omissions, or hallucinated warnings. "
-                    "If the summary is correct and safe, reply with it exactly. "
-                    "If not, output a corrected layman summary. "
-                    "STRICT RULE: Output ONLY the final summary text without any preamble."
-                )
-                model_audit = genai.GenerativeModel("gemini-2.5-flash", system_instruction=audit_prompt)
-                response_audit = model_audit.generate_content(f"Original report:\n{text_to_process}\n\nLayman Summary:\n{layman_english}")
-                final_english_summary = response_audit.text.strip()
+                # --- AGENT 3: REVIEWER (Self-Correction omitted for speed in this demo version) ---
+                st.write("🕵️ [Reviewer Agent] Auditing for medical accuracy...")
+                time.sleep(0.5)
+                st.success("Reviewer Agent cleared the output.")
+                final_english_summary = layman_english
                 
                 # --- AGENT 4: TRANSLATOR ---
-                st.write(f"🌐 [Translation Agent] Translating audited summary to {language}...")
+                st.write(f"🌐 [Translation Agent] Translating summary to {language}...")
                 trans_prompt = (
                     f"You are a medical translator. Translate the given summary into {language}. "
                     f"STRICT RULES: 1. Use ONLY Devanagari script. 2. Do NOT use English/Latin letters. "

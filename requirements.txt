@@ -2,3 +2,4 @@ streamlit
 openai
 pytesseract
 pillow
+python-dotenv

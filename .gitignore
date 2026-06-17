@@ -1,0 +1,21 @@
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Cache directories
+__pycache__/
+*.py[cod]
+
+# Streamlit secrets (contains private API tokens)
+.streamlit/config.toml
+.streamlit/secrets.toml
+
+# Environment files (contains credentials)
+.env
+
+# Local OS files
+.DS_Store
+Thumbs.db
+*.log
